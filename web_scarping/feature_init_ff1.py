@@ -577,13 +577,12 @@ def number_of_emails(domain):
     try:
         whois_info = whois.whois(domain)
         number_emails = whois_info['emails']
-        if len(number_emails)>0:
+        if number_emails and len(number_emails) > 0:
             return len(number_emails)
         else:
             return 0
     except Exception as e:
         return -1
-    return 0
 #69
 def get_ssl_update_age(domain):
     try:

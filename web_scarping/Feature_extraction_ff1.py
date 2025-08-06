@@ -41,7 +41,7 @@ def data_set_list_creation(domain):
         pass
 
     try:
-        if soup != None:
+        if soup is not None:
             domain = fe._url_domain(url)
             features_list_ml = [
                         fe.url_length(domain),
@@ -117,6 +117,8 @@ def data_set_list_creation(domain):
             ]
             return features_list_ml
         else:
-            print("Else")
+            print("Soup is None - website not accessible")
+            return None
     except Exception as e:
-        print(e)
+        print(f"Error in feature extraction: {e}")
+        return None
