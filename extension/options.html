@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Phishing Checker Options</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; padding: 16px; }
+      label { display: block; margin-bottom: 8px; }
+      input { width: 320px; padding: 6px 8px; }
+    </style>
+  </head>
+  <body>
+    <h1>Options</h1>
+    <label>
+      API Base URL
+      <input id="apiBase" placeholder="http://127.0.0.1:5000" />
+    </label>
+    <button id="save">Save</button>
+    <script>
+      (async function(){
+        const load = () => new Promise(r => chrome.storage.sync.get({ apiBase: 'http://127.0.0.1:5000' }, r));
+        const save = (v) => new Promise(r => chrome.storage.sync.set(v, r));
+        const { apiBase } = await load();
+        document.getElementById('apiBase').value = apiBase;
+        document.getElementById('save').onclick = async () => {
+          const apiBase = document.getElementById('apiBase').value.trim();
+          await save({ apiBase });
+          alert('Saved');
+        };
+      })();
+    </script>
+  </body>
+  </html>
+
+
+
+
+
+

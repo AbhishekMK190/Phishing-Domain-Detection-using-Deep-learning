@@ -1,0 +1,100 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Phishing Checker</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 12px; width: 320px; }
+      .muted { color: #616161; }
+      .small { font-size: 12px; }
+      button { padding: 6px 10px; }
+      .circle { width: 120px; height: 120px; border-radius: 50%; background: #ffffff; border: 6px solid #e0e0e0; display: flex; align-items: center; justify-content: center; margin: 10px auto; position: relative; overflow: hidden; }
+      .spinner { width: 90px; height: 90px; border: 6px solid #eee; border-top-color: #90caf9; border-radius: 50%; animation: spin 1s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .circle.red { background: #ffebee; border-color: #ffcdd2; }
+      .circle.green { background: #e8f5e9; border-color: #c8e6c9; }
+      .label { text-align: center; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <div id="card" style="width:100%; max-width:280px; margin:0 auto; border-radius:8px; background:#fff; box-shadow:0 8px 24px rgba(0,0,0,0.15); padding:10px 0 12px 0;">
+      <div style="text-align:center; font-weight:600; font-size:13px; color:#424242; letter-spacing:0.6px;">RESULTS</div>
+      <div style="display:flex; align-items:center; justify-content:center; padding:8px 0 12px 0;">
+        <div id="stateCircle" style="width:120px; height:120px; border-radius:50%; background:#eee; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:600; box-shadow:inset 0 0 0 8px rgba(0,0,0,0.06);">
+          <div class="spinner"></div>
+        </div>
+      </div>
+      <div id="scoreText" class="small muted" style="text-align:center;">Checking current tab...</div>
+    </div>
+    <script>
+      async function getActiveTabUrl() {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        return tab?.url || '';
+      }
+      function getStore() { return new Promise(r => chrome.storage.sync.get({ apiBase: 'http://127.0.0.1:5000' }, r)); }
+      async function withTimeout(promise, ms) {
+        let t;
+        try {
+          return await Promise.race([
+            promise,
+            new Promise((_, rej) => { t = setTimeout(() => rej(new Error('timeout')), ms); })
+          ]);
+        } finally { clearTimeout(t); }
+      }
+      function sendMessageP(msg) {
+        return new Promise((resolve) => {
+          try {
+            chrome.runtime.sendMessage(msg, (resp) => resolve(resp));
+          } catch (e) { resolve({ ok: false, error: String(e) }); }
+        });
+      }
+
+      async function check() {
+        const url = await getActiveTabUrl();
+        const { apiBase } = await getStore();
+        try {
+          if (!url || url.startsWith('chrome://') || url.startsWith('edge://')) {
+            const stateCircle = document.getElementById('stateCircle');
+            const scoreText = document.getElementById('scoreText');
+            stateCircle.innerHTML = 'Unsupported tab';
+            stateCircle.style.background = '#bdbdbd';
+            scoreText.textContent = '';
+            return;
+          }
+          const bg = await withTimeout(sendMessageP({ type: 'CHECK_URL', url }), 15000);
+          const payload = (bg && bg.ok) ? bg.data : null;
+          const data = payload ? payload.data : null;
+          const stateCircle = document.getElementById('stateCircle');
+          const scoreText = document.getElementById('scoreText');
+          
+          if (data && data.status === 'ok') {
+            const label = data.label;
+            const score = (data.score ?? 0).toFixed(3);
+            stateCircle.innerHTML = label === 'phishing' ? 'Phishing' : 'Safe';
+            stateCircle.style.background = label === 'phishing' ? '#ef5350' : '#66bb6a';
+            scoreText.textContent = `Score: ${score}`;
+          } else if (data && data.status) {
+            stateCircle.innerHTML = data.status.replace('_',' ');
+            stateCircle.style.background = '#bdbdbd';
+            scoreText.textContent = data.detail || 'N/A';
+          } else {
+            stateCircle.innerHTML = 'No response';
+            stateCircle.style.background = '#bdbdbd';
+            const statusCode = payload ? payload.statusCode : null;
+            const err = bg && !bg.ok ? (bg.error || '') : '';
+            scoreText.textContent = statusCode ? `HTTP ${statusCode}` : (err || '');
+          }
+        } catch (e) {
+          const stateCircle = document.getElementById('stateCircle');
+          const scoreText = document.getElementById('scoreText');
+          stateCircle.innerHTML = (e && e.message === 'timeout') ? 'Timed out' : 'API error';
+          stateCircle.style.background = '#bdbdbd';
+          scoreText.textContent = '';
+        }
+      }
+      check();
+    </script>
+  </body>
+  </html>
+
+

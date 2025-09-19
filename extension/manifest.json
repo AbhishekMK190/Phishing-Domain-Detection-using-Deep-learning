@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Phishing Domain Checker",
+  "version": "1.0.0",
+  "description": "Automatically checks visited websites against your local ML model API.",
+  "permissions": ["activeTab", "storage", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Phishing Checker"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html"
+}
+
+
