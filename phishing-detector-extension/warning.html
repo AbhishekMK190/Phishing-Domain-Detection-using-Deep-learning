@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Phishing Warning</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .warning-container {
+      border: 2px solid #ff4444;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 30px;
+      background-color: #fff8f8;
+    }
+    .warning-header {
+      color: #d32f2f;
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .warning-icon {
+      font-size: 24px;
+      margin-right: 10px;
+    }
+    .btn {
+      display: inline-block;
+      padding: 10px 20px;
+      margin: 10px 5px 0 0;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      text-decoration: none;
+      text-align: center;
+    }
+    .btn-danger {
+      background-color: #d32f2f;
+      color: white;
+    }
+    .btn-secondary {
+      background-color: #757575;
+      color: white;
+    }
+    .btn-safe {
+      background-color: #388e3c;
+      color: white;
+    }
+    .confidence-meter {
+      margin: 15px 0;
+      height: 10px;
+      background-color: #e0e0e0;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .confidence-level {
+      height: 100%;
+      background: linear-gradient(90deg, #ff8a80, #d32f2f);
+      width: 0;
+      transition: width 1s ease-in-out;
+    }
+    .details {
+      margin: 20px 0;
+      padding: 15px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="warning-container">
+    <div class="warning-header">
+      <span class="warning-icon">⚠️</span>
+      <h1>Phishing Warning</h1>
+    </div>
+    
+    <p>This website (<span id="phishing-url">example.com</span>) has been flagged as a potential phishing site.</p>
+    
+    <div class="confidence-meter">
+      <div id="confidence-level" class="confidence-level"></div>
+    </div>
+    <div>Detection Confidence: <span id="confidence-value">0</span>%</div>
+    
+    <div class="details">
+      <p id="warning-message">Phishing sites try to steal your personal information, such as passwords or credit card numbers, by pretending to be trustworthy websites.</p>
+    </div>
+    
+    <div>
+      <button id="back-to-safety" class="btn btn-safe">Back to Safety</button>
+      <button id="proceed-anyway" class="btn btn-secondary">I Understand the Risks</button>
+    </div>
+    
+    <div style="margin-top: 20px; font-size: 12px; color: #757575;">
+      <p>If you believe this is a mistake, you can <a href="#" id="report-false-positive">report a false positive</a>.</p>
+    </div>
+  </div>
+
+  <script src="js/warning.js"></script>
+</body>
+</html>

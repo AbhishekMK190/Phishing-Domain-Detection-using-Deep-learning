@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Admin - Phishing Detector</title>
+    <title>Admin - Quanta AI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   </head>
@@ -23,6 +23,50 @@
             <div class="card-body">
               <h5 class="card-title">Predictions Breakdown</h5>
               <canvas id="pie" height="220"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-lg-4">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">Model Status</h5>
+              <div id="model-status">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span>Retraining Status:</span>
+                  <span id="retrain-status" class="badge bg-secondary">Loading...</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span>Auto-Retraining:</span>
+                  <span id="auto-retrain-status" class="badge bg-secondary">Loading...</span>
+                </div>
+                <div class="mb-3">
+                  <small id="retrain-reason" class="text-muted">Checking...</small>
+                </div>
+                <button id="trigger-retrain" class="btn btn-sm btn-primary" disabled>
+                  Trigger Retraining
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-lg-4">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">Feedback Summary</h5>
+              <div id="feedback-summary">
+                <div class="d-flex justify-content-between mb-1">
+                  <span>Total Feedback:</span>
+                  <span id="total-feedback">-</span>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                  <span>Disagreements:</span>
+                  <span id="total-disagreements">-</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span>Disagreement Rate:</span>
+                  <span id="disagreement-rate">-</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -77,6 +121,111 @@
 
       }
 
+      async function loadModelStatus() {
+        try {
+          // Get model status
+          const modelRes = await fetch('/api/model-status');
+          const modelData = await modelRes.json();
+          
+          // Get background tasks status
+          const tasksRes = await fetch('/api/background-tasks-status');
+          const tasksData = await tasksRes.json();
+          
+          const statusElement = document.getElementById('retrain-status');
+          const reasonElement = document.getElementById('retrain-reason');
+          const triggerButton = document.getElementById('trigger-retrain');
+          
+          // Check if auto-retraining is currently running
+          const isAutoRetraining = tasksData.retraining_status?.retraining_active || false;
+          
+          if (isAutoRetraining) {
+            statusElement.textContent = 'Auto-Retraining';
+            statusElement.className = 'badge bg-info';
+            triggerButton.disabled = true;
+            reasonElement.textContent = 'Automatic retraining in progress...';
+          } else if (modelData.should_retrain) {
+            statusElement.textContent = 'Needs Retraining';
+            statusElement.className = 'badge bg-warning';
+            triggerButton.disabled = false;
+            reasonElement.textContent = modelData.reason || 'No information available';
+          } else {
+            statusElement.textContent = 'Up to Date';
+            statusElement.className = 'badge bg-success';
+            triggerButton.disabled = true;
+            reasonElement.textContent = modelData.reason || 'No information available';
+          }
+          
+          // Update auto-retraining status indicator
+          const autoStatusElement = document.getElementById('auto-retrain-status');
+          if (autoStatusElement) {
+            if (tasksData.background_manager_active) {
+              autoStatusElement.textContent = 'Active';
+              autoStatusElement.className = 'badge bg-success';
+            } else {
+              autoStatusElement.textContent = 'Inactive';
+              autoStatusElement.className = 'badge bg-danger';
+            }
+          }
+          
+        } catch (error) {
+          console.error('Failed to load model status:', error);
+          document.getElementById('retrain-status').textContent = 'Error';
+          document.getElementById('retrain-status').className = 'badge bg-danger';
+        }
+      }
+
+      async function loadFeedbackSummary() {
+        try {
+          const res = await fetch('/admin/feedback');
+          const data = await res.json();
+          const items = data.items || [];
+          
+          const totalFeedback = items.length;
+          const disagreements = items.filter(item => item.vote === 'disagree').length;
+          const disagreementRate = totalFeedback > 0 ? (disagreements / totalFeedback * 100).toFixed(1) : 0;
+          
+          document.getElementById('total-feedback').textContent = totalFeedback;
+          document.getElementById('total-disagreements').textContent = disagreements;
+          document.getElementById('disagreement-rate').textContent = `${disagreementRate}%`;
+          
+        } catch (error) {
+          console.error('Failed to load feedback summary:', error);
+        }
+      }
+
+      async function triggerRetraining() {
+        const button = document.getElementById('trigger-retrain');
+        const originalText = button.textContent;
+        
+        button.disabled = true;
+        button.textContent = 'Retraining...';
+        
+        try {
+          const res = await fetch('/api/trigger-model-update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          const result = await res.json();
+          
+          if (result.success && result.retrained) {
+            alert(`Model retrained successfully!\nTraining samples: ${result.training_samples}\nAccuracy: ${(result.metrics?.accuracy * 100 || 0).toFixed(1)}%`);
+          } else {
+            alert(`Retraining result: ${result.reason || 'No retraining needed'}`);
+          }
+          
+          // Reload model status
+          await loadModelStatus();
+          
+        } catch (error) {
+          console.error('Retraining failed:', error);
+          alert('Failed to trigger retraining. Please try again.');
+        } finally {
+          button.textContent = originalText;
+          button.disabled = false;
+        }
+      }
+
       async function loadList() {
         const filter = document.getElementById('filter').value;
         const res = await fetch(`/admin/list?label=${encodeURIComponent(filter)}`);
@@ -127,12 +276,18 @@
         await fetch('/admin/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) });
         await Promise.all([loadSummary(), loadList()]);
       };
+      
+      document.getElementById('trigger-retrain').onclick = triggerRetraining;
 
       async function init() {
         await loadSummary();
+        await loadModelStatus();
+        await loadFeedbackSummary();
         await loadList();
         setInterval(async () => {
           await loadSummary();
+          await loadModelStatus();
+          await loadFeedbackSummary();
           await loadList();
         }, 15000);
       }

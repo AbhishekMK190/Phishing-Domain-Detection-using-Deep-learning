@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quanta AI</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      width: 320px;
+      min-height: 400px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #1f2937;
+    }
+
+    .container {
+      padding: 16px;
+      height: 100%;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 16px;
+      color: white;
+    }
+
+    .logo {
+      font-size: 28px;
+      margin-bottom: 6px;
+    }
+
+    .title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 11px;
+      opacity: 0.9;
+    }
+
+    .main-content {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      min-height: 280px;
+    }
+
+    .status-circle {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin: 0 auto 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: white;
+      font-weight: bold;
+    }
+
+    .status-circle.loading {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    }
+
+    .status-circle.safe {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .status-circle.warning {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+
+    .status-circle.danger {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .status-circle.offline {
+      background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .domain-name {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      word-break: break-all;
+      color: #1f2937;
+    }
+
+    .domain-status {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    .score-info {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-bottom: 12px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 8px 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: rgba(107, 114, 128, 0.1);
+      color: #374151;
+      border: 1px solid rgba(107, 114, 128, 0.2);
+    }
+
+    
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+    
+    .footer {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.8);
+      text-align: center;
+    }
+    
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+      text-align: center;
+      display: none;
+    }
+    
+    .error-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #dc2626;
+      margin-bottom: 4px;
+    }
+    
+    .error-detail {
+      font-size: 11px;
+      color: #7f1d1d;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">🛡️</div>
+      <div class="title">Quanta AI</div>
+      <div class="subtitle">Real-time Phishing Protection</div>
+    </div>
+    
+    <div class="main-content">
+      <div id="statusCircle" class="status-circle loading">
+        <div class="spinner"></div>
+      </div>
+      
+      <div id="domainName" class="domain-name">Checking current website...</div>
+      <div id="domainStatus" class="domain-status">Please wait</div>
+      <div id="scoreInfo" class="score-info"></div>
+      
+      <div id="actions" class="actions" style="display: none;">
+        <button id="recheckBtn" class="btn btn-secondary">Recheck</button>
+        <button id="reportBtn" class="btn btn-primary">Report</button>
+      </div>
+      
+      <div id="errorMessage" class="error-message">
+        <div class="error-title">Connection Error</div>
+        <div id="errorDetail" class="error-detail">Unable to connect to Quanta AI API</div>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <div id="apiStatus">API Status: Checking...</div>
+    </div>
+  </div>
+  
+  <script src="popup_simple.js"></script>
+</body>
+</html>

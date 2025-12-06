@@ -1,0 +1,7 @@
+{
+  "model_type": "fast_nn",
+  "accuracy": 0.8517055382511586,
+  "avg_prediction_time_ms": 0.05632871227732439,
+  "recommended_for": "browser_extension",
+  "created_at": "2025-09-21T16:32:25.706099"
+}

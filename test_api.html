@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>Testing API Connection</h1>
+    <button onclick="testAPI()">Test API</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const result = document.getElementById('result');
+            result.innerHTML = 'Testing...';
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ domain: 'google.com' })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML = '<h3>✅ API Working!</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                } else {
+                    result.innerHTML = '<h3>❌ API Error</h3>Status: ' + response.status + '<br>Error: ' + response.statusText;
+                }
+            } catch (error) {
+                result.innerHTML = '<h3>❌ Connection Failed</h3>Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

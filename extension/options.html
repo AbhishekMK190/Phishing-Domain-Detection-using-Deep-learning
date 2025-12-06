@@ -1,39 +1,321 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Phishing Checker Options</title>
-    <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; padding: 16px; }
-      label { display: block; margin-bottom: 8px; }
-      input { width: 320px; padding: 6px 8px; }
-    </style>
-  </head>
-  <body>
-    <h1>Options</h1>
-    <label>
-      API Base URL
-      <input id="apiBase" placeholder="http://127.0.0.1:5000" />
-    </label>
-    <button id="save">Save</button>
-    <script>
-      (async function(){
-        const load = () => new Promise(r => chrome.storage.sync.get({ apiBase: 'http://127.0.0.1:5000' }, r));
-        const save = (v) => new Promise(r => chrome.storage.sync.set(v, r));
-        const { apiBase } = await load();
-        document.getElementById('apiBase').value = apiBase;
-        document.getElementById('save').onclick = async () => {
-          const apiBase = document.getElementById('apiBase').value.trim();
-          await save({ apiBase });
-          alert('Saved');
-        };
-      })();
-    </script>
-  </body>
-  </html>
-
-
-
-
-
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quanta AI Settings</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    
+    .logo {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    
+    .title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 8px;
+    }
+    
+    .subtitle {
+      font-size: 16px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+    
+    .section {
+      margin-bottom: 32px;
+    }
+    
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+    
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      background: white;
+    }
+    
+    .form-input:focus {
+      outline: none;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+    
+    .form-description {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .checkbox {
+      width: 20px;
+      height: 20px;
+      accent-color: #6366f1;
+    }
+    
+    .checkbox-label {
+      font-size: 14px;
+      color: #374151;
+      cursor: pointer;
+      flex: 1;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 32px;
+    }
+    
+    .btn {
+      flex: 1;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+    
+    .btn-secondary {
+      background: rgba(107, 114, 128, 0.1);
+      color: #374151;
+      border: 2px solid rgba(107, 114, 128, 0.2);
+    }
+    
+    .btn-secondary:hover {
+      background: rgba(107, 114, 128, 0.15);
+    }
+    
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+    
+    .status {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-top: 16px;
+      font-size: 14px;
+      font-weight: 500;
+      display: none;
+    }
+    
+    .status.success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #10b981;
+    }
+    
+    .status.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #ef4444;
+    }
+    
+    .status.info {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #3b82f6;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    
+    .stat-card {
+      background: #f9fafb;
+      padding: 16px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1f2937;
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+    
+    .divider {
+      height: 1px;
+      background: #e5e7eb;
+      margin: 24px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">🛡️</div>
+      <div class="title">Quanta AI Settings</div>
+      <div class="subtitle">Configure your phishing protection preferences</div>
+    </div>
+    
+    <!-- API Configuration -->
+    <div class="section">
+      <div class="section-title">
+        <span>🔗</span>
+        API Configuration
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label" for="apiBase">API Base URL</label>
+        <input type="text" id="apiBase" class="form-input" placeholder="http://127.0.0.1:5000">
+        <div class="form-description">URL of your Quanta AI API server</div>
+      </div>
+    </div>
+    
+    <!-- Protection Settings -->
+    <div class="section">
+      <div class="section-title">
+        <span>⚙️</span>
+        Protection Settings
+      </div>
+      
+      <div class="checkbox-group">
+        <input type="checkbox" id="autoCheck" class="checkbox">
+        <label class="checkbox-label" for="autoCheck">
+          <strong>Automatic Protection</strong><br>
+          <small>Automatically check websites when you visit them</small>
+        </label>
+      </div>
+      
+      <div class="checkbox-group">
+        <input type="checkbox" id="showSafeNotifications" class="checkbox">
+        <label class="checkbox-label" for="showSafeNotifications">
+          <strong>Show Safe Notifications</strong><br>
+          <small>Display notifications for safe websites</small>
+        </label>
+      </div>
+      
+      <div class="checkbox-group">
+        <input type="checkbox" id="enableSounds" class="checkbox">
+        <label class="checkbox-label" for="enableSounds">
+          <strong>Sound Alerts</strong><br>
+          <small>Play sound alerts for threats</small>
+        </label>
+      </div>
+    </div>
+    
+    <!-- Cache Management -->
+    <div class="section">
+      <div class="section-title">
+        <span>💾</span>
+        Cache Management
+      </div>
+      
+      <div class="stats-grid" id="cacheStats">
+        <div class="stat-card">
+          <div class="stat-value" id="cacheSize">-</div>
+          <div class="stat-label">Cached Entries</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="apiStatus">-</div>
+          <div class="stat-label">API Status</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <!-- Actions -->
+    <div class="actions">
+      <button id="testBtn" class="btn btn-secondary">Test Connection</button>
+      <button id="clearCacheBtn" class="btn btn-danger">Clear Cache</button>
+      <button id="saveBtn" class="btn btn-primary">Save Settings</button>
+    </div>
+    
+    <div id="status" class="status"></div>
+  </div>
+  
+  <script src="options.js"></script>
+</body>
+</html>

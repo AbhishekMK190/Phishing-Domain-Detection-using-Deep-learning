@@ -1,35 +1,101 @@
-# Phishing Domain Checker Extension (Chrome MV3)
+# 🛡️ Quanta AI - Browser Extension
 
-This extension posts the current tab URL to your local Flask API (`/api/check`) and shows a red warning banner when the model flags a page as phishing.
+**Advanced real-time phishing protection with AI-powered detection and automatic alerts.**
 
-## Prerequisites
-- Flask app running at `http://127.0.0.1:5000` (endpoint `/api/check` exists).
-- CORS enabled for `/api/*` in `app.py`.
+## ✨ Features
 
-## Install (Chrome)
-1. Open Chrome → `chrome://extensions`.
-2. Enable Developer mode.
-3. Click "Load unpacked" and select this `extension/` folder.
-4. Optional: Open the extension options page to change the API base URL.
+### 🚀 **Automatic Protection**
+- **Real-time scanning** of every website you visit
+- **Instant popup notifications** with beautiful, modern UI
+- **Smart caching** for faster subsequent checks
+- **Background monitoring** with minimal performance impact
 
-## Popup UI
-- Click the extension icon to open the popup.
-- It shows the current tab's status: LEGITIMATE or PHISHING with score.
-- You can edit and save the API base URL directly from the popup.
+### 🎨 **Modern Interface**
+- **Sleek popup** with gradient backgrounds and smooth animations
+- **Visual status indicators** (Safe ✅, Warning ⚠️, Danger 🚨)
+- **Risk score display** with detailed information
+- **Responsive design** that works on all screen sizes
 
-## How it works
-- `content.js` runs on every page and sends `{ url: window.location.href }` to `<API_BASE>/api/check`.
-- If the response is `{ status: "ok", label: "phishing" }`, a red banner is injected at the top with the score.
+### ⚙️ **Advanced Settings**
+- **Configurable API endpoint** for your PhishGuard server
+- **Customizable notifications** (show/hide safe sites)
+- **Sound alerts** for threats
+- **Cache management** with statistics
 
-## Files
-- `manifest.json`: Manifest V3 configuration
-- `background.js`: sets a default API base in storage
-- `content.js`: calls the API and shows the banner
-- `options.html`: change API base URL
+## 📦 Installation
 
-## Troubleshooting
-- No banner: ensure the Flask app is reachable at `http://127.0.0.1:5000`.
-- CORS error: verify `CORS(app, resources={r"/api/*": {"origins": "*"}})` is present in `app.py`.
+### Chrome/Edge Installation:
+1. Open your browser and go to `chrome://extensions/` or `edge://extensions/`
+2. Enable **"Developer mode"** in the top right
+3. Click **"Load unpacked"** and select this `extension` folder
+4. The 🛡️ Quanta AI extension will appear in your toolbar
+
+## ⚙️ Configuration
+
+### Initial Setup:
+1. **Click the extension icon** 🛡️ in your toolbar
+2. **Click "Settings"** in the popup footer
+3. **Configure your preferences:**
+   - **API Base URL**: `http://127.0.0.1:5000` (default)
+   - **Automatic Protection**: Enable/disable auto-checking
+   - **Safe Notifications**: Show notifications for safe sites
+   - **Sound Alerts**: Enable audio warnings
+
+## 🚀 Usage
+
+### Automatic Mode (Recommended):
+- **Just browse normally!** PhishGuard Pro automatically checks every website
+- **Notifications appear** in the top-right corner of pages
+- **Safe sites** show briefly (4 seconds) then disappear
+- **Threats** stay visible until manually closed
+
+## 🎨 Notification Types
+
+### ✅ **Safe Website**
+- **Green gradient** background
+- **Checkmark icon** ✅
+- **Auto-hides** after 4 seconds
+
+### ⚠️ **Suspicious Website**
+- **Orange gradient** background
+- **Warning icon** ⚠️
+- **Stays visible** for 8 seconds
+
+### 🚨 **Phishing Detected**
+- **Red gradient** background with pulsing animation
+- **Alert icon** 🚨
+- **Persistent notification** (doesn't auto-hide)
+- **Action buttons** (Report False Positive, Leave Site)
+
+## 🔗 Integration
+
+### PhishGuard API Requirements:
+- **POST /api/check** endpoint accepting `{"domain": "example.com"}`
+- **GET /api/health** endpoint for status checks
+- **JSON responses** with `{"status": "ok", "label": "legitimate", "score": 0.1}`
+
+## 🐛 Troubleshooting
+
+### Common Issues:
+
+**Extension not working:**
+- Check if PhishGuard server is running on `http://127.0.0.1:5000`
+- Verify API endpoint in extension settings
+- Look for errors in browser console (F12)
+
+**No notifications appearing:**
+- Ensure "Automatic Protection" is enabled in settings
+- Check if you're on a supported page (not chrome:// or file://)
+- Verify content script permissions
+
+**API connection failed:**
+- Test connection in extension settings
+- Check firewall/antivirus blocking local connections
+- Verify PhishGuard server is accessible
+
+---
+
+**🛡️ Stay protected with PhishGuard Pro!**
 
 
 

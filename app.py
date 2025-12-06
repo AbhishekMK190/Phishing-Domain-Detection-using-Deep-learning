@@ -12,17 +12,34 @@ import time
 import sqlite3
 from datetime import datetime
 from threading import Lock
+import model_retraining
+import dual_model_handler
+import background_tasks
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-change-me')
 
-# Fix for TensorFlow compatibility issue with 'auto' reduction
-model = tf.keras.models.load_model("my_model.h5", compile=False)
-model.compile(optimizer='adam',
-              loss=tf.keras.losses.BinaryCrossentropy(reduction='sum_over_batch_size'),
-              metrics=['binary_accuracy'])
-# model = pickle.load(open("model.h5","rb"))
+# Initialize dual model handler
+print("Initializing dual model system...")
+try:
+    dual_models = dual_model_handler.get_dual_model_handler()
+    print("Dual model system initialized successfully")
+except Exception as e:
+    print(f"Failed to initialize dual model system: {e}")
+    print("Continuing with legacy model fallback...")
+    dual_models = None
+
+# Legacy model for backward compatibility (will be replaced by accurate model)
+try:
+    model = tf.keras.models.load_model("my_model.h5", compile=False)
+    model.compile(optimizer='adam',
+                  loss=tf.keras.losses.BinaryCrossentropy(reduction='sum_over_batch_size'),
+                  metrics=['binary_accuracy'])
+    print("Legacy model loaded for backward compatibility")
+except Exception as e:
+    print(f"Legacy model not loaded: {e}")
+    model = None
 
 # --- SQLite logging setup ---
 DB_PATH = os.path.join(os.path.dirname(__file__), 'predictions.db')
@@ -112,6 +129,15 @@ def log_prediction(domain: str, url: str, label: str, score: float | None):
 
 init_db()
 
+# Initialize background task manager for auto-retraining
+print("Starting background task manager...")
+try:
+    background_manager = background_tasks.start_background_tasks()
+    print("Background task manager started successfully")
+except Exception as e:
+    print(f"Failed to start background task manager: {e}")
+    background_manager = None
+
 # Lightweight in-memory prediction cache to avoid repeated model calls
 PREDICTION_CACHE_TTL_SECONDS = int(os.getenv('PRED_CACHE_TTL', '900'))  # default 15 minutes
 _prediction_cache = {}
@@ -189,17 +215,22 @@ def check_phishing():
         if domain.startswith('www.'):
             domain = domain[4:]
         
+        # Remove trailing slash if present
+        domain = domain.rstrip('/')
+        
         # Validate domain before processing
         if not is_valid_domain(domain):
             return render_template('real_result.html', result="invalid")
-        # Short-circuit for trusted domains
+            
+        # Short-circuit for trusted domains - CHECK THIS FIRST
         if is_trusted_domain(domain):
             try:
                 _cache_set(domain, 0.0, "legitimate")
-                log_prediction(domain, f"https://{domain}", "legitimate", 0.0)
+                prediction_id = log_prediction(domain, f"https://{domain}", "legitimate", 0.0)
             except Exception:
-                pass
-            return render_template('real_result.html', result="The URL  is predicted as a legitimate URL.")
+                prediction_id = None
+            print(f"TRUSTED DOMAIN: {domain} classified as legitimate")
+            return render_template('real_result.html', result="The URL is predicted as a legitimate URL.", prediction_id=prediction_id, domain=domain, url=f"https://{domain}")
             
         print(domain)
         url = f"https://{domain}"
@@ -216,10 +247,10 @@ def check_phishing():
                 label = cached['label']
                 result = f"The URL  is predicted as a {label} URL."
                 try:
-                    log_prediction(domain, url, label, cached.get('score'))
+                    prediction_id = log_prediction(domain, url, label, cached.get('score'))
                 except Exception:
-                    pass
-                return render_template('real_result.html', result=result)
+                    prediction_id = None
+                return render_template('real_result.html', result=result, prediction_id=prediction_id, domain=domain, url=url)
 
             cached_features = _features_get(domain)
             if cached_features is None:
@@ -242,25 +273,249 @@ def check_phishing():
                 result = "The URL  is predicted as a phishing URL."
                 _cache_set(domain, float(prediction[0][0]), "phishing")
                 try:
-                    log_prediction(domain, url, "phishing", float(prediction[0][0]))
+                    prediction_id = log_prediction(domain, url, "phishing", float(prediction[0][0]))
                 except Exception:
-                    pass
+                    prediction_id = None
 
             else:
                 print("The URL  is predicted as a legitimate URL.")
                 result = "The URL  is predicted as a legitimate URL."
                 _cache_set(domain, float(prediction[0][0]), "legitimate")
                 try:
-                    log_prediction(domain, url, "legitimate", float(prediction[0][0]))
+                    prediction_id = log_prediction(domain, url, "legitimate", float(prediction[0][0]))
                 except Exception:
-                    pass
-            return render_template('real_result.html', result=result)
+                    prediction_id = None
+            return render_template('real_result.html', result=result, prediction_id=prediction_id, domain=domain, url=url)
         else:
             try:
                 log_prediction(domain, url, "not_active", None)
             except Exception:
                 pass
             return render_template('real_result.html', result="not active")
+
+@app.route('/api/health', methods=['GET'])
+def api_health():
+    """Health check endpoint for the extension"""
+    return jsonify({
+        "status": "ok",
+        "message": "PhishGuard API is running",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "2.1",
+        "dual_model_system": True
+    }), 200
+
+@app.route('/api/models/info', methods=['GET'])
+def api_models_info():
+    """Get information about available models"""
+    try:
+        model_info = dual_models.get_model_info()
+        return jsonify({
+            "status": "ok",
+            "models": model_info,
+            "endpoints": {
+                "fast": "/api/check-fast (optimized for browser extension)",
+                "accurate": "/api/check (optimized for detailed analysis)"
+            },
+            "recommendations": {
+                "browser_extension": "Use /api/check-fast for real-time protection",
+                "website_analysis": "Use /api/check for detailed analysis",
+                "mobile_app": "Use /api/check-fast for better performance"
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "detail": str(e)}), 500
+
+@app.route('/api/models/benchmark', methods=['POST'])
+def api_models_benchmark():
+    """Benchmark both models with test data"""
+    try:
+        # Use a sample feature vector for benchmarking
+        test_features = [0.5] * 65  # Sample feature vector
+        
+        results = dual_models.benchmark_models(test_features, num_runs=50)
+        
+        return jsonify({
+            "status": "ok",
+            "benchmark_results": results,
+            "test_runs": 50,
+            "note": "Times are in milliseconds"
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "detail": str(e)}), 500
+
+@app.route('/api/check-fast', methods=['POST'])
+def api_check_fast():
+    """Fast API endpoint optimized for browser extension"""
+    from urllib.parse import urlparse
+    data = request.get_json(silent=True) or {}
+    raw_input = (data.get('domain') or data.get('url') or '').strip()
+    threshold_override = data.get('threshold')
+    
+    if not raw_input:
+        return jsonify({"error": "url or domain is required"}), 400
+
+    # Normalize input
+    candidate = raw_input
+    parsed = urlparse(candidate if '://' in candidate else f"http://{candidate}")
+    host = parsed.netloc or parsed.path
+    if '@' in host:
+        host = host.split('@', 1)[1]
+    if ':' in host:
+        host = host.split(':', 1)[0]
+    domain = host.lower().strip()
+    if domain.startswith('www.'):
+        domain = domain[4:]
+
+    if '.' not in domain or not is_valid_domain(domain):
+        try:
+            log_prediction(domain or raw_input, raw_input, "invalid", None)
+        except Exception:
+            pass
+        return jsonify({"status": "invalid", "detail": "invalid or local domain"}), 200
+
+    url = f"https://{domain}"
+
+    # Short-circuit for trusted domains
+    if is_trusted_domain(domain):
+        _cache_set(domain, 0.0, "legitimate")
+        try:
+            pred_id = log_prediction(domain, url, "legitimate", 0.0)
+        except Exception:
+            pred_id = None
+        return jsonify({
+            "status": "ok",
+            "domain": domain,
+            "url": url,
+            "score": 0.0,
+            "threshold": _get_threshold(0.5),
+            "label": "legitimate",
+            "prediction_id": pred_id,
+            "cached": False,
+            "trusted": True,
+            "model_type": "trusted_list",
+            "optimized_for": "speed"
+        }), 200
+
+    # Serve from cache if available
+    cached = _cache_get(domain)
+    if cached:
+        try:
+            pred_id = log_prediction(domain, url, cached['label'], cached.get('score'))
+        except Exception:
+            pred_id = None
+        return jsonify({
+            "status": "ok",
+            "domain": domain,
+            "url": url,
+            "score": cached['score'],
+            "label": cached['label'],
+            "cached": True,
+            "threshold": _get_threshold(0.5),
+            "prediction_id": pred_id,
+            "model_type": "cached",
+            "optimized_for": "speed"
+        }), 200
+
+    try:
+        response = requests.get(url, timeout=4, headers=DEFAULT_HEADERS)  # Faster timeout
+    except requests.exceptions.RequestException as e:
+        try:
+            log_prediction(domain, url, "not_active", None)
+        except Exception:
+            pass
+        return jsonify({"status": "not_active", "detail": str(e)}), 200
+
+    if response.status_code != 200:
+        try:
+            log_prediction(domain, url, "not_active", None)
+        except Exception:
+            pass
+        return jsonify({"status": "not_active", "http_status": response.status_code}), 200
+
+    # Extract features
+    cached_features = _features_get(domain)
+    if cached_features is None:
+        new_url_features = fex.data_set_list_creation(domain)
+        _features_set(domain, new_url_features)
+    else:
+        new_url_features = cached_features
+        
+    if not isinstance(new_url_features, list):
+        return jsonify({"status": "feature_error"}), 200
+
+    # Use FAST model for extension
+    try:
+        import numpy as np
+        features_array = np.array([new_url_features], dtype=np.float32)
+        
+        # Get fast prediction
+        prediction_result = dual_models.predict_fast(features_array)
+        score = prediction_result['score']
+        
+        th = None
+        try:
+            th = float(threshold_override)
+        except Exception:
+            th = _get_threshold(0.5)
+            
+        is_phishing = score >= th
+        label = "phishing" if is_phishing else "legitimate"
+        
+        _cache_set(domain, score, label)
+        try:
+            pred_id = log_prediction(domain, url, label, score)
+        except Exception:
+            pred_id = None
+            
+        return jsonify({
+            "status": "ok",
+            "domain": domain,
+            "url": url,
+            "score": score,
+            "threshold": th,
+            "label": label,
+            "prediction_id": pred_id,
+            "model_type": prediction_result.get('model_type', 'fast'),
+            "model_name": prediction_result.get('model_name', 'unknown'),
+            "prediction_time_ms": prediction_result.get('prediction_time_ms', 0),
+            "optimized_for": "speed"
+        }), 200
+        
+    except Exception as e:
+        print(f"Fast model prediction failed: {e}")
+        # Fallback to legacy model if available
+        if model is not None:
+            try:
+                import numpy as np
+                features_array = np.array([new_url_features], dtype=np.float32)
+                pred = model.predict(features_array)
+                score = float(pred[0][0])
+                th = _get_threshold(0.5) if threshold_override is None else float(threshold_override)
+                is_phishing = score >= th
+                label = "phishing" if is_phishing else "legitimate"
+
+                _cache_set(domain, score, label)
+                try:
+                    pred_id = log_prediction(domain, url, label, score)
+                except Exception:
+                    pred_id = None
+
+                return jsonify({
+                    "status": "ok",
+                    "domain": domain,
+                    "url": url,
+                    "score": score,
+                    "threshold": th,
+                    "label": label,
+                    "prediction_id": pred_id,
+                    "model_type": "legacy",
+                    "model_name": "legacy_neural_network",
+                    "optimized_for": "accuracy"
+                }), 200
+            except Exception as legacy_error:
+                return jsonify({"status": "model_error", "detail": f"Both models failed: {str(e)}, {str(legacy_error)}"}), 500
+        else:
+            return jsonify({"status": "model_error", "detail": str(e)}), 500
 
 @app.route('/api/check', methods=['POST'])
 def api_check():
@@ -355,30 +610,76 @@ def api_check():
     if not isinstance(new_url_features, list):
         return jsonify({"status": "feature_error"}), 200
 
-    import numpy as np
-    features_array = np.array([new_url_features], dtype=np.float32)
-    pred = model.predict(features_array)
-    score = float(pred[0][0])
-    th = None
+    # Use ACCURATE model for website (detailed analysis)
     try:
-        th = float(threshold_override)
-    except Exception:
-        th = _get_threshold(0.5)
-    is_phishing = score >= th
-    _cache_set(domain, score, "phishing" if is_phishing else "legitimate")
-    try:
-        pred_id = log_prediction(domain, url, "phishing" if is_phishing else "legitimate", score)
-    except Exception:
-        pred_id = None
-    return jsonify({
-        "status": "ok",
-        "domain": domain,
-        "url": url,
-        "score": score,
-        "threshold": th,
-        "label": "phishing" if is_phishing else "legitimate",
-        "prediction_id": pred_id
-    }), 200
+        import numpy as np
+        features_array = np.array([new_url_features], dtype=np.float32)
+        
+        # Get accurate prediction
+        prediction_result = dual_models.predict_accurate(features_array)
+        score = prediction_result['score']
+        
+        th = None
+        try:
+            th = float(threshold_override)
+        except Exception:
+            th = _get_threshold(0.5)
+            
+        is_phishing = score >= th
+        label = "phishing" if is_phishing else "legitimate"
+        
+        _cache_set(domain, score, label)
+        try:
+            pred_id = log_prediction(domain, url, label, score)
+        except Exception:
+            pred_id = None
+            
+        return jsonify({
+            "status": "ok",
+            "domain": domain,
+            "url": url,
+            "score": score,
+            "threshold": th,
+            "label": label,
+            "prediction_id": pred_id,
+            "model_type": prediction_result.get('model_type', 'accurate'),
+            "model_name": prediction_result.get('model_name', 'unknown'),
+            "prediction_time_ms": prediction_result.get('prediction_time_ms', 0),
+            "optimized_for": "accuracy"
+        }), 200
+        
+    except Exception as e:
+        # Fallback to legacy model if available
+        if model is not None:
+            try:
+                pred = model.predict(features_array)
+                score = float(pred[0][0])
+                th = _get_threshold(0.5) if threshold_override is None else float(threshold_override)
+                is_phishing = score >= th
+                label = "phishing" if is_phishing else "legitimate"
+                
+                _cache_set(domain, score, label)
+                try:
+                    pred_id = log_prediction(domain, url, label, score)
+                except Exception:
+                    pred_id = None
+                    
+                return jsonify({
+                    "status": "ok",
+                    "domain": domain,
+                    "url": url,
+                    "score": score,
+                    "threshold": th,
+                    "label": label,
+                    "prediction_id": pred_id,
+                    "model_type": "legacy",
+                    "model_name": "legacy_neural_network",
+                    "optimized_for": "accuracy"
+                }), 200
+            except Exception as legacy_error:
+                return jsonify({"status": "model_error", "detail": f"Both models failed: {str(e)}, {str(legacy_error)}"}), 500
+        else:
+            return jsonify({"status": "model_error", "detail": str(e)}), 500
 
 # --- Feedback APIs and Metrics/Alerts ---
 @app.route('/api/feedback', methods=['POST'])
@@ -404,6 +705,99 @@ def api_feedback():
         finally:
             conn.close()
     return jsonify({"status": "ok"}), 200
+
+@app.route('/api/trigger-model-update', methods=['POST'])
+def api_trigger_model_update():
+    """Trigger model retraining based on feedback data."""
+    try:
+        result = model_retraining.trigger_model_update()
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "retrained": False
+        }), 500
+
+@app.route('/api/model-status')
+def api_model_status():
+    """Get model retraining status and metrics."""
+    try:
+        print("Getting model retrainer...")
+        retrainer = model_retraining.get_retrainer()
+        print("Checking if should retrain...")
+        should_retrain, reason = retrainer.should_retrain()
+        print(f"Should retrain: {should_retrain}, Reason: {reason}")
+        
+        # Get recent retraining history
+        with _db_lock:
+            conn = sqlite3.connect(DB_PATH)
+            try:
+                cur = conn.cursor()
+                cur.execute("""
+                    SELECT timestamp, success, training_samples, reason 
+                    FROM retraining_log 
+                    ORDER BY id DESC LIMIT 5
+                """)
+                recent_retraining = [
+                    {
+                        "timestamp": row[0],
+                        "success": bool(row[1]),
+                        "training_samples": row[2],
+                        "reason": row[3]
+                    }
+                    for row in cur.fetchall()
+                ]
+            except sqlite3.OperationalError as e:
+                # Table doesn't exist yet
+                print(f"Retraining log table doesn't exist: {e}")
+                recent_retraining = []
+            finally:
+                conn.close()
+        
+        result = {
+            "should_retrain": should_retrain,
+            "reason": reason,
+            "recent_retraining": recent_retraining
+        }
+        print(f"Returning model status: {result}")
+        return jsonify(result), 200
+    except Exception as e:
+        print(f"Error in model status API: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/background-tasks-status')
+def api_background_tasks_status():
+    """Get background tasks status for admin dashboard."""
+    try:
+        # Get status from the background task manager
+        status = background_tasks.get_background_status()
+        
+        return jsonify({
+            "background_manager_active": status.get("is_running", False),
+            "retraining_status": {
+                "retraining_active": status.get("retraining_active", False),
+                "last_check": status.get("last_check")
+            },
+            "auto_retrain_enabled": status.get("auto_retrain_enabled", False),
+            "status": "active" if status.get("is_running", False) else "inactive",
+            "check_interval_minutes": status.get("check_interval_minutes", 5),
+            "thread_alive": status.get("thread_alive", False)
+        }), 200
+        
+    except Exception as e:
+        print(f"Error in background tasks status API: {e}")
+        return jsonify({
+            "background_manager_active": False,
+            "retraining_status": {
+                "retraining_active": False,
+                "error": str(e)
+            },
+            "auto_retrain_enabled": False,
+            "status": "error"
+        }), 500
 
 @app.route('/admin/metrics')
 def admin_metrics():

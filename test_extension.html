@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Extension Test Page</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🛡️ Quanta AI Extension Test Page</h1>
+
+    <div class="test-section" id="apiTest">
+        <h3>1. API Connection Test</h3>
+        <button onclick="testAPI()">Test API Connection</button>
+        <div id="apiResult"></div>
+    </div>
+
+    <div class="test-section" id="extensionTest">
+        <h3>2. Extension Detection Test</h3>
+        <button onclick="testExtension()">Test Extension</button>
+        <div id="extensionResult"></div>
+    </div>
+
+    <div class="test-section" id="domainTest">
+        <h3>3. Domain Check Test</h3>
+        <input type="text" id="domainInput" placeholder="Enter domain (e.g., google.com)" value="google.com">
+        <button onclick="testDomain()">Check Domain</button>
+        <div id="domainResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>4. Troubleshooting Steps</h3>
+        <ol>
+            <li><strong>Load Extension:</strong> Go to <code>chrome://extensions/</code>, enable Developer mode, click "Load unpacked" and select the extension folder</li>
+            <li><strong>Check API:</strong> Make sure your Flask server is running on port 5000</li>
+            <li><strong>Test Connection:</strong> Click the buttons above to test functionality</li>
+            <li><strong>Check Console:</strong> Open DevTools (F12) and check for errors</li>
+            <li><strong>Verify Popup:</strong> Click the extension icon in the toolbar</li>
+        </ol>
+    </div>
+
+    <script>
+        async function testAPI() {
+            const result = document.getElementById('apiResult');
+            result.innerHTML = 'Testing...';
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/health');
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML = `
+                        <div class="success">
+                            API is working!<br>
+                            Status: ${data.status}<br>
+                            Message: ${data.message}
+                        </div>
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <div class="error">
+                            API Error: ${response.status}<br>
+                            Make sure your Flask server is running on port 5000
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="error">
+                        Connection Failed: ${error.message}<br>
+                        Possible issues:<br>
+                        - Flask server not running<br>
+                        - Wrong port (should be 5000)<br>
+                        - Firewall blocking connection
+                    </div>
+                `;
+            }
+        }
+
+        function testExtension() {
+            const result = document.getElementById('extensionResult');
+            result.innerHTML = 'Testing...';
+
+            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+                result.innerHTML = `
+                    <div class="success">
+                        Chrome Extension API detected<br>
+                        Extension should be loaded and working
+                    </div>
+                `;
+            } else {
+                result.innerHTML = `
+                    <div class="error">
+                        Chrome Extension API not found<br>
+                        This page needs to be opened as an extension or with extension permissions
+                    </div>
+                `;
+            }
+        }
+
+        async function testDomain() {
+            const domain = document.getElementById('domainInput').value;
+            const result = document.getElementById('domainResult');
+            result.innerHTML = 'Testing...';
+
+            if (!domain) {
+                result.innerHTML = '<div class="error">Please enter a domain</div>';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ domain: domain })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML = `
+                        <div class="success">
+                            Domain check successful!<br>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <div class="error">
+                            Domain check failed: ${response.status}<br>
+                            ${response.statusText}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="error">
+                        Domain check error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Auto-test API on page load
+        window.addEventListener('load', () => {
+            testAPI();
+            testExtension();
+        });
+    </script>
+</body>
+</html>

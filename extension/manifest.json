@@ -1,25 +1,48 @@
 {
   "manifest_version": 3,
-  "name": "Phishing Domain Checker",
-  "version": "1.0.0",
-  "description": "Automatically checks visited websites against your local ML model API.",
-  "permissions": ["activeTab", "storage", "tabs"],
-  "host_permissions": ["<all_urls>"],
+  "name": "🛡️ Quanta AI",
+  "version": "2.0.0",
+  "description": "Advanced real-time phishing protection with AI-powered detection and automatic alerts.",
+  "permissions": [
+    "activeTab", 
+    "storage", 
+    "tabs", 
+    "notifications",
+    "alarms"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "http://127.0.0.1:5000/*",
+    "http://localhost:5000/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "Phishing Checker"
+    "default_popup": "popup_simple.html",
+    "default_title": "Quanta AI - Click to view protection status",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "run_at": "document_idle"
+      "css": ["content.css"],
+      "run_at": "document_start"
     }
   ],
-  "options_page": "options.html"
+  "options_page": "options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
 }
 
 

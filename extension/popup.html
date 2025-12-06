@@ -1,100 +1,644 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Phishing Checker</title>
-    <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 12px; width: 320px; }
-      .muted { color: #616161; }
-      .small { font-size: 12px; }
-      button { padding: 6px 10px; }
-      .circle { width: 120px; height: 120px; border-radius: 50%; background: #ffffff; border: 6px solid #e0e0e0; display: flex; align-items: center; justify-content: center; margin: 10px auto; position: relative; overflow: hidden; }
-      .spinner { width: 90px; height: 90px; border: 6px solid #eee; border-top-color: #90caf9; border-radius: 50%; animation: spin 1s linear infinite; }
-      @keyframes spin { to { transform: rotate(360deg); } }
-      .circle.red { background: #ffebee; border-color: #ffcdd2; }
-      .circle.green { background: #e8f5e9; border-color: #c8e6c9; }
-      .label { text-align: center; font-weight: 600; }
-    </style>
-  </head>
-  <body>
-    <div id="card" style="width:100%; max-width:280px; margin:0 auto; border-radius:8px; background:#fff; box-shadow:0 8px 24px rgba(0,0,0,0.15); padding:10px 0 12px 0;">
-      <div style="text-align:center; font-weight:600; font-size:13px; color:#424242; letter-spacing:0.6px;">RESULTS</div>
-      <div style="display:flex; align-items:center; justify-content:center; padding:8px 0 12px 0;">
-        <div id="stateCircle" style="width:120px; height:120px; border-radius:50%; background:#eee; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:600; box-shadow:inset 0 0 0 8px rgba(0,0,0,0.06);">
-          <div class="spinner"></div>
-        </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quanta AI - Phishing Protection</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #00d4ff;
+      --secondary-color: #0099cc;
+      --success-color: #10b981;
+      --warning-color: #f59e0b;
+      --danger-color: #ef4444;
+      --bg-primary: #0a0e27;
+      --bg-secondary: #1a1f3a;
+      --text-primary: #ffffff;
+      --text-secondary: #b8c5d6;
+      --border-color: #34495e;
+      --shadow-color: rgba(0, 212, 255, 0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      width: 340px;
+      min-height: 420px;
+      background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+    
+    .container {
+      padding: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .header {
+      background: rgba(10, 14, 39, 0.9);
+      padding: 16px;
+      text-align: center;
+      border-bottom: 1px solid var(--border-color);
+      position: relative;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    
+    .logo i {
+      font-size: 24px;
+      color: var(--primary-color);
+    }
+    
+    .title {
+      font-size: 18px;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .subtitle {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    
+    .main-content {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .status-card {
+      background: rgba(26, 31, 58, 0.9);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .status-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 36px;
+      color: white;
+      position: relative;
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .status-icon.safe {
+      background: rgba(16, 185, 129, 0.1);
+      border: 2px solid var(--success-color);
+      color: var(--success-color);
+    }
+    
+    .status-icon.warning {
+      background: rgba(245, 158, 11, 0.1);
+      border: 2px solid var(--warning-color);
+      color: var(--warning-color);
+    }
+    
+    .status-icon.danger {
+      background: rgba(239, 68, 68, 0.1);
+      border: 2px solid var(--danger-color);
+      color: var(--danger-color);
+    }
+    
+    .status-icon.loading {
+      background: rgba(99, 102, 241, 0.1);
+      border: 2px solid var(--primary-color);
+      color: var(--primary-color);
+    }
+
+    .status-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .status-message {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .url-display {
+      background: rgba(52, 73, 94, 0.3);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 12px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      word-break: break-all;
+      text-align: left;
+      max-height: 80px;
+      overflow-y: auto;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+      width: 100%;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      color: white;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .error-message {
+      color: var(--danger-color);
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--danger-color);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 16px;
+      font-size: 13px;
+      display: none;
+    }
+
+    .footer {
+      padding: 12px 20px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border-color);
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .domain-name {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      word-break: break-all;
+      color: #1f2937;
+    }
+    
+    .domain-status {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+    
+    .score-info {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-bottom: 12px;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+    }
+    
+    .btn {
+      flex: 1;
+      padding: 8px 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+    }
+    
+    .btn-secondary {
+      background: rgba(107, 114, 128, 0.1);
+      color: #374151;
+      border: 1px solid rgba(107, 114, 128, 0.2);
+    }
+    
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+    
+    .footer {
+      margin-top: 12px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.8);
+      text-align: center;
+    }
+    
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 6px;
+      padding: 8px;
+      margin-top: 8px;
+      text-align: center;
+      display: none;
+    }
+    
+    .error-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #dc2626;
+      margin-bottom: 2px;
+    }
+    
+    .error-detail {
+      font-size: 10px;
+      color: #7f1d1d;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">
+        <i class="fas fa-shield-alt"></i>
+        <span class="title">Quanta AI</span>
       </div>
-      <div id="scoreText" class="small muted" style="text-align:center;">Checking current tab...</div>
+      <div class="subtitle">Advanced Phishing Protection</div>
     </div>
-    <script>
-      async function getActiveTabUrl() {
+    
+    <div class="main-content">
+      <div class="status-card">
+        <div id="statusIcon" class="status-icon loading">
+          <i class="fas fa-shield-alt"></i>
+        </div>
+        
+        <h2 id="statusTitle" class="status-title">Analyzing Website</h2>
+        <p id="statusMessage" class="status-message">Checking the current page for phishing attempts...</p>
+        
+        <div id="urlContainer" class="url-display" style="display: none;">
+          <div id="currentUrl" class="domain-name"></div>
+          <div id="domainInfo" class="domain-info"></div>
+        </div>
+        
+        <div id="resultContainer" class="result-container" style="display: none;">
+          <div id="resultScore" class="result-score"></div>
+          <div id="resultDetails" class="result-details"></div>
+        </div>
+        
+        <div class="action-buttons">
+          <button id="checkButton" class="btn btn-primary">
+            <i class="fas fa-sync-alt"></i> Rescan
+          </button>
+          <button id="moreInfoButton" class="btn btn-secondary" style="display: none;">
+            <i class="fas fa-info-circle"></i> Details
+          </button>
+        </div>
+        
+        <div id="errorMessage" class="error-message"></div>
+      </div>
+      
+      <div class="footer">
+        <div class="status-indicators">
+          <span id="connectionStatus" class="status-indicator">
+            <i class="fas fa-circle"></i> Connected
+          </span>
+          <span id="lastUpdated" class="status-indicator">
+            <i class="far fa-clock"></i> Just now
+          </span>
+        </div>
+        <div class="version">v1.2.0</div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Inline JavaScript to avoid loading issues
+    console.log('🛡️ Quanta AI popup starting...');
+    
+    const statusCircle = document.getElementById('statusCircle');
+    const domainName = document.getElementById('domainName');
+    const domainStatus = document.getElementById('domainStatus');
+    const scoreInfo = document.getElementById('scoreInfo');
+    const actions = document.getElementById('actions');
+    const recheckBtn = document.getElementById('recheckBtn');
+    const reportBtn = document.getElementById('reportBtn');
+    const errorMessage = document.getElementById('errorMessage');
+    const errorDetail = document.getElementById('errorDetail');
+    const apiStatus = document.getElementById('apiStatus');
+    
+    let currentTab = null;
+    
+    // Initialize immediately
+    setTimeout(init, 100);
+    
+    async function init() {
+      console.log('Initializing popup...');
+      
+      try {
+        // Set up event listeners
+        recheckBtn.addEventListener('click', () => performCheck(true));
+        reportBtn.addEventListener('click', () => reportIssue());
+        
+        // Get current tab
+        await getCurrentTab();
+        
+        // Start checking
+        await performCheck();
+        
+      } catch (error) {
+        console.error('Init error:', error);
+        showError('Initialization failed: ' + error.message);
+      }
+    }
+    
+    async function getCurrentTab() {
+      try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        return tab?.url || '';
-      }
-      function getStore() { return new Promise(r => chrome.storage.sync.get({ apiBase: 'http://127.0.0.1:5000' }, r)); }
-      async function withTimeout(promise, ms) {
-        let t;
-        try {
-          return await Promise.race([
-            promise,
-            new Promise((_, rej) => { t = setTimeout(() => rej(new Error('timeout')), ms); })
-          ]);
-        } finally { clearTimeout(t); }
-      }
-      function sendMessageP(msg) {
-        return new Promise((resolve) => {
-          try {
-            chrome.runtime.sendMessage(msg, (resp) => resolve(resp));
-          } catch (e) { resolve({ ok: false, error: String(e) }); }
-        });
-      }
-
-      async function check() {
-        const url = await getActiveTabUrl();
-        const { apiBase } = await getStore();
-        try {
-          if (!url || url.startsWith('chrome://') || url.startsWith('edge://')) {
-            const stateCircle = document.getElementById('stateCircle');
-            const scoreText = document.getElementById('scoreText');
-            stateCircle.innerHTML = 'Unsupported tab';
-            stateCircle.style.background = '#bdbdbd';
-            scoreText.textContent = '';
-            return;
-          }
-          const bg = await withTimeout(sendMessageP({ type: 'CHECK_URL', url }), 15000);
-          const payload = (bg && bg.ok) ? bg.data : null;
-          const data = payload ? payload.data : null;
-          const stateCircle = document.getElementById('stateCircle');
-          const scoreText = document.getElementById('scoreText');
-          
-          if (data && data.status === 'ok') {
-            const label = data.label;
-            const score = (data.score ?? 0).toFixed(3);
-            stateCircle.innerHTML = label === 'phishing' ? 'Phishing' : 'Safe';
-            stateCircle.style.background = label === 'phishing' ? '#ef5350' : '#66bb6a';
-            scoreText.textContent = `Score: ${score}`;
-          } else if (data && data.status) {
-            stateCircle.innerHTML = data.status.replace('_',' ');
-            stateCircle.style.background = '#bdbdbd';
-            scoreText.textContent = data.detail || 'N/A';
-          } else {
-            stateCircle.innerHTML = 'No response';
-            stateCircle.style.background = '#bdbdbd';
-            const statusCode = payload ? payload.statusCode : null;
-            const err = bg && !bg.ok ? (bg.error || '') : '';
-            scoreText.textContent = statusCode ? `HTTP ${statusCode}` : (err || '');
-          }
-        } catch (e) {
-          const stateCircle = document.getElementById('stateCircle');
-          const scoreText = document.getElementById('scoreText');
-          stateCircle.innerHTML = (e && e.message === 'timeout') ? 'Timed out' : 'API error';
-          stateCircle.style.background = '#bdbdbd';
-          scoreText.textContent = '';
+        currentTab = tab;
+        
+        if (tab && tab.url) {
+          const domain = extractDomain(tab.url);
+          domainName.textContent = domain || 'Unknown domain';
+          console.log('Current domain:', domain);
         }
+      } catch (error) {
+        console.error('Failed to get current tab:', error);
+        domainName.textContent = 'Unable to get domain';
+        showError('Unable to access current tab');
       }
-      check();
-    </script>
-  </body>
-  </html>
-
-
+    }
+    
+    function extractDomain(url) {
+      try {
+        return new URL(url).hostname;
+      } catch {
+        return url;
+      }
+    }
+    
+    function sendMessage(message) {
+      return new Promise((resolve) => {
+        try {
+          chrome.runtime.sendMessage(message, (response) => {
+            if (chrome.runtime.lastError) {
+              console.error('Runtime error:', chrome.runtime.lastError);
+              resolve({ success: false, error: chrome.runtime.lastError.message });
+            } else {
+              resolve(response || { success: false, error: 'No response' });
+            }
+          });
+        } catch (error) {
+          console.error('Send message error:', error);
+          resolve({ success: false, error: error.message });
+        }
+      });
+    }
+    
+    async function performCheck(force = false) {
+      console.log('Performing check...');
+      
+      if (!currentTab || !currentTab.url) {
+        showError('No active tab found');
+        return;
+      }
+      
+      const url = currentTab.url;
+      
+      // Check if URL should be skipped
+      if (shouldSkipUrl(url)) {
+        showUnsupportedTab();
+        return;
+      }
+      
+      // Show loading state
+      showLoading();
+      
+      try {
+        // Test direct API call first
+        const domain = extractDomain(url);
+        console.log('Testing API for domain:', domain);
+        
+        // Try direct fetch to API
+        const response = await fetch('http://127.0.0.1:5000/api/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain: domain }),
+          signal: AbortSignal.timeout(10000)
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Direct API response:', data);
+          handleDirectApiResult(data, domain);
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+      } catch (error) {
+        console.error('Check error:', error);
+        handleCheckError(error.message);
+      }
+    }
+    
+    function shouldSkipUrl(url) {
+      if (!url) return true;
+      
+      const skipPatterns = [
+        /^chrome:/,
+        /^edge:/,
+        /^moz-extension:/,
+        /^chrome-extension:/,
+        /^about:/,
+        /^file:/,
+        /^data:/
+      ];
+      
+      return skipPatterns.some(pattern => pattern.test(url));
+    }
+    
+    function handleDirectApiResult(data, domain) {
+      hideError();
+      
+      if (data.status === 'ok') {
+        const isPhishing = data.label === 'phishing';
+        const score = parseFloat(data.score || 0);
+        
+        domainName.textContent = domain;
+        
+        if (isPhishing) {
+          showDangerResult(score);
+        } else if (score > 0.3) {
+          showWarningResult(score);
+        } else {
+          showSafeResult(score);
+        }
+        
+        actions.style.display = 'flex';
+        apiStatus.textContent = 'API Connected ✓';
+        
+      } else {
+        handleCheckError(data.detail || 'API returned error status');
+      }
+    }
+    
+    function handleCheckError(error) {
+      console.error('Check error:', error);
+      
+      statusCircle.className = 'status-circle offline';
+      statusCircle.innerHTML = '⚠️';
+      
+      domainStatus.textContent = 'Unable to verify security';
+      scoreInfo.textContent = '';
+      
+      showError(error);
+      
+      apiStatus.textContent = 'API Offline ✗';
+      actions.style.display = 'flex';
+      reportBtn.textContent = 'Report Problem';
+    }
+    
+    function showLoading() {
+      statusCircle.className = 'status-circle loading';
+      statusCircle.innerHTML = '<div class="spinner"></div>';
+      
+      domainStatus.textContent = 'Checking security...';
+      scoreInfo.textContent = '';
+      actions.style.display = 'none';
+      hideError();
+      apiStatus.textContent = 'Checking...';
+    }
+    
+    function showSafeResult(score) {
+      statusCircle.className = 'status-circle safe';
+      statusCircle.innerHTML = '✅';
+      
+      domainStatus.textContent = 'This website appears to be safe';
+      scoreInfo.textContent = `Risk Score: ${score.toFixed(3)}`;
+    }
+    
+    function showWarningResult(score) {
+      statusCircle.className = 'status-circle warning';
+      statusCircle.innerHTML = '⚠️';
+      
+      domainStatus.textContent = 'This website has suspicious characteristics';
+      scoreInfo.textContent = `Risk Score: ${score.toFixed(3)}`;
+    }
+    
+    function showDangerResult(score) {
+      statusCircle.className = 'status-circle danger';
+      statusCircle.innerHTML = '🚨';
+      
+      domainStatus.textContent = 'PHISHING DETECTED!';
+      scoreInfo.textContent = `Risk Score: ${score.toFixed(3)}`;
+      
+      reportBtn.textContent = 'Report False Positive';
+    }
+    
+    function showUnsupportedTab() {
+      statusCircle.className = 'status-circle offline';
+      statusCircle.innerHTML = '🚫';
+      
+      domainName.textContent = 'System Page';
+      domainStatus.textContent = 'This page type is not supported';
+      scoreInfo.textContent = '';
+      actions.style.display = 'none';
+      hideError();
+      apiStatus.textContent = 'Page not supported';
+    }
+    
+    function showError(message) {
+      errorMessage.style.display = 'block';
+      errorDetail.textContent = message;
+    }
+    
+    function hideError() {
+      errorMessage.style.display = 'none';
+    }
+    
+    function reportIssue() {
+      console.log('Reporting issue for:', currentTab?.url);
+      
+      domainStatus.textContent = 'Thank you for your feedback!';
+      reportBtn.textContent = 'Reported ✓';
+      reportBtn.disabled = true;
+      
+      setTimeout(() => {
+        reportBtn.disabled = false;
+        reportBtn.textContent = 'Report';
+      }, 3000);
+    }
+    
+    console.log('🛡️ Quanta AI popup script loaded');
+  </script>
+</body>
+</html>

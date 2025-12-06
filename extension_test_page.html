@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Extension Notification Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 40px; 
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-test { background: #007bff; color: white; }
+        .btn-manual { background: #28a745; color: white; }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .instructions {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ Quanta AI Extension Test Page</h1>
+        
+        <div class="instructions">
+            <h3>📋 Instructions:</h3>
+            <ol>
+                <li><strong>Make sure your extension is loaded</strong> in Chrome/Edge developer mode</li>
+                <li><strong>Open browser console</strong> (F12) to see debug messages</li>
+                <li><strong>Look for notifications</strong> in the top-right corner of the page</li>
+                <li><strong>Check that Flask server is running</strong> on port 5000</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Auto-Detection Test</h3>
+            <p>The extension should automatically check this page when you load it. Look for a notification in the top-right corner!</p>
+            <div id="autoStatus" class="status">Waiting for auto-detection...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Manual Test Buttons</h3>
+            <p>Click these buttons to trigger manual checks:</p>
+            
+            <button class="btn-manual" onclick="triggerManualCheck()">
+                🔍 Trigger Manual Check
+            </button>
+            
+            <button class="btn-test" onclick="testDirectAPI()">
+                🌐 Test Direct API Call
+            </button>
+            
+            <button class="btn-test" onclick="checkConsole()">
+                📝 Check Console Logs
+            </button>
+            
+            <div id="manualStatus" class="status" style="display: none;">Manual test result will appear here</div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Debug Information</h3>
+            <p><strong>Current URL:</strong> <span id="currentUrl"></span></p>
+            <p><strong>Domain:</strong> <span id="currentDomain"></span></p>
+            <p><strong>Extension Status:</strong> <span id="extensionStatus">Checking...</span></p>
+            <p><strong>API Status:</strong> <span id="apiStatus">Checking...</span></p>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Expected Behavior</h3>
+            <ul>
+                <li>✅ <strong>Auto-check:</strong> Notification should appear automatically when page loads</li>
+                <li>✅ <strong>Manual check:</strong> Click button to trigger manual notification</li>
+                <li>✅ <strong>Console logs:</strong> Should see debug messages starting with "🔍"</li>
+                <li>✅ <strong>Notification style:</strong> Should appear in top-right with modern design</li>
+                <li>✅ <strong>Result display:</strong> Should show "Safe", "Warning", or "Danger" status</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Update debug info
+        document.getElementById('currentUrl').textContent = window.location.href;
+        document.getElementById('currentDomain').textContent = window.location.hostname;
+
+        // Check if extension is loaded
+        function checkExtensionStatus() {
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                document.getElementById('extensionStatus').textContent = '✅ Extension API Available';
+                document.getElementById('extensionStatus').style.color = 'green';
+            } else {
+                document.getElementById('extensionStatus').textContent = '❌ Extension API Not Found';
+                document.getElementById('extensionStatus').style.color = 'red';
+            }
+        }
+
+        // Test direct API call
+        async function testDirectAPI() {
+            const status = document.getElementById('manualStatus');
+            status.style.display = 'block';
+            status.textContent = 'Testing API...';
+            status.className = 'status';
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/check-fast', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ domain: window.location.hostname })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    status.textContent = `✅ API Working! Result: ${data.label} (Score: ${data.score})`;
+                    status.className = 'status success';
+                    document.getElementById('apiStatus').textContent = '✅ API Connected';
+                    document.getElementById('apiStatus').style.color = 'green';
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                status.textContent = `❌ API Error: ${error.message}`;
+                status.className = 'status error';
+                document.getElementById('apiStatus').textContent = '❌ API Offline';
+                document.getElementById('apiStatus').style.color = 'red';
+            }
+        }
+
+        // Trigger manual check via extension
+        function triggerManualCheck() {
+            console.log('🔍 [Test Page] Triggering manual check...');
+            
+            // Try to send message to extension
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                try {
+                    chrome.runtime.sendMessage({ type: 'MANUAL_CHECK' }, (response) => {
+                        console.log('🔍 [Test Page] Extension response:', response);
+                    });
+                } catch (error) {
+                    console.log('🔍 [Test Page] Extension message failed:', error);
+                }
+            }
+
+            // Also trigger via global function if available
+            if (typeof window.phishGuardCheck === 'function') {
+                console.log('🔍 [Test Page] Calling global phishGuardCheck function');
+                window.phishGuardCheck();
+            }
+
+            const status = document.getElementById('manualStatus');
+            status.style.display = 'block';
+            status.textContent = '🔍 Manual check triggered! Look for notification in top-right corner.';
+            status.className = 'status success';
+        }
+
+        // Check console logs
+        function checkConsole() {
+            console.log('🔍 [Test Page] === EXTENSION DEBUG CHECK ===');
+            console.log('🔍 [Test Page] Current URL:', window.location.href);
+            console.log('🔍 [Test Page] Current Domain:', window.location.hostname);
+            console.log('🔍 [Test Page] Chrome Extension API:', typeof chrome !== 'undefined' ? 'Available' : 'Not Available');
+            console.log('🔍 [Test Page] PhishGuard Global Function:', typeof window.phishGuardCheck);
+            console.log('🔍 [Test Page] Look for messages starting with "🔍 [Extension Debug]" or "🛡️"');
+            
+            const status = document.getElementById('manualStatus');
+            status.style.display = 'block';
+            status.textContent = '📝 Debug info logged to console. Open DevTools (F12) to see logs.';
+            status.className = 'status success';
+        }
+
+        // Auto-check status monitor
+        let autoCheckTimeout = setTimeout(() => {
+            const status = document.getElementById('autoStatus');
+            status.textContent = '⏰ No auto-detection yet. Check console for errors.';
+            status.className = 'status error';
+        }, 5000);
+
+        // Listen for any notifications being shown
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.id === 'phishguard-notification') {
+                        clearTimeout(autoCheckTimeout);
+                        const status = document.getElementById('autoStatus');
+                        status.textContent = '✅ Auto-detection working! Notification appeared.';
+                        status.className = 'status success';
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.documentElement, {
+            childList: true,
+            subtree: true
+        });
+
+        // Initialize
+        checkExtensionStatus();
+        testDirectAPI();
+
+        console.log('🔍 [Test Page] Test page loaded. Extension should auto-check this page.');
+    </script>
+</body>
+</html>

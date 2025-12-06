@@ -9,4 +9,5 @@ beautifulsoup4>=4.9.0
 python-whois>=0.7.3
 dnspython>=2.2.0
 google>=3.0.0
-matplotlib>=3.5.0 
+matplotlib>=3.5.0
+googlesearch-python>=1.0.0
